@@ -16,16 +16,18 @@ const getDashboardAnalytics = async (req, res) => {
         // Get all bookings
         const allBookings = await Booking.find();
 
-        // Calculate revenue metrics
-        const totalRevenue = allBookings.reduce((sum, booking) => sum + (booking.amount || 0), 0);
+        // Calculate revenue metrics (only for completed bookings)
+        const completedBookings = allBookings.filter(booking => booking.status === 'completed');
+        
+        const totalRevenue = completedBookings.reduce((sum, booking) => sum + (booking.amount || 0), 0);
 
         const todayBookings = allBookings.filter(booking =>
-            new Date(booking.dateTime) >= startOfToday
+            booking.status === 'completed' && new Date(booking.dateTime) >= startOfToday
         );
         const todayRevenue = todayBookings.reduce((sum, booking) => sum + (booking.amount || 0), 0);
 
         const monthBookings = allBookings.filter(booking =>
-            new Date(booking.dateTime) >= startOfMonth
+            booking.status === 'completed' && new Date(booking.dateTime) >= startOfMonth
         );
         const monthRevenue = monthBookings.reduce((sum, booking) => sum + (booking.amount || 0), 0);
 
@@ -45,7 +47,9 @@ const getDashboardAnalytics = async (req, res) => {
 
             const monthBookings = allBookings.filter(booking => {
                 const bookingDate = new Date(booking.dateTime);
-                return bookingDate >= monthStart && bookingDate <= monthEnd;
+                return booking.status === 'completed' && 
+                       bookingDate >= monthStart && 
+                       bookingDate <= monthEnd;
             });
 
             const revenue = monthBookings.reduce((sum, booking) => sum + (booking.amount || 0), 0);

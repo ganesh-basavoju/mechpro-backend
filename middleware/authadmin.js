@@ -24,4 +24,4 @@ async function adminAuthmiddleware(req, res, next) {
         res.status(401).json({ message: 'Token is not valid' });
     }
 };
-module.exports = { adminAuthmiddleware };
+module.exports ={ adminAuthmiddleware };

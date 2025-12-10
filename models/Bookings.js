@@ -14,7 +14,7 @@ const bookingSchema = new mongoose.Schema({
     },
     serviceType: { type: String, required: true },
     mechanic: { type: mongoose.Schema.Types.ObjectId, ref: 'Mechanic' },
-      
+    odometerReading: { type: Number, required: true },
     dateTime: { type: Date, required: true },
     amount: { type: Number, required: true },
     status: { 

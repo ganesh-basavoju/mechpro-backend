@@ -12,6 +12,7 @@ module.exports = function (req, res, next) {
   // Verify token
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your_jwt_secret');
+    
     req.mechanic = decoded.mechanic;
     next();
   } catch (err) {

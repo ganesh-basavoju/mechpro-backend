@@ -13,6 +13,7 @@ const servicesRoutes = require("./routes/services");
 const analyticsRoutes = require("./routes/analytics");
 const authRoutes = require("./routes/authRoutes");
 const userprofile = require("./routes/userprofile");
+const billRoutes = require("./routes/billRoutes");
 const { adminAuthmiddleware } = require("./middleware/authadmin")
 const amdinAuth = require("./routes/adminAuth");
 const publicRoutes = require("./routes/public");
@@ -90,13 +91,14 @@ app.post("/api/fcm-token",async (req, res) => {
 
 app.use("/api/adminauth", amdinAuth);
 app.use("/api/mechanic", mechanicRoutes);
+app.use("/api/mechanic", billRoutes); // Add bill routes
 app.use("/api/auth", authRoutes);
 app.use("/api/user", userprofile);
 app.use("/api/public", publicRoutes);
 
 
 
-app.use(adminAuthmiddleware);
+//app.use(adminAuthmiddleware);
 app.use("/api/admin/user", userRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/admin/booking", bookingRoutes);

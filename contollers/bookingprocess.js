@@ -115,11 +115,16 @@ exports.createBooking = async (req, res) => {
             carId,
             services,
             instructions,
+            odometerReading,
             dateTime,
             totalPrice
         } = req.body;
         console.log(req.body, "req.body");
 
+        // Validate odometer reading
+        if (!odometerReading || odometerReading <= 0) {
+            return res.status(400).json({ message: 'Valid odometer reading is required' });
+        }
 
         // Get user and mechanic details
         const user = await User.findById(req.user.id);
@@ -155,6 +160,7 @@ exports.createBooking = async (req, res) => {
             },
             serviceType: services.map(s => s.name).join(', '),
             mechanic: mechanicId,
+            odometerReading: parseInt(odometerReading),
             dateTime: new Date(dateTime),
             amount: totalPrice,
             status: 'pending',
@@ -207,6 +213,7 @@ exports.createBooking = async (req, res) => {
                 services: services.map(s => s.name),
                 dateTime: booking.dateTime,
                 totalPrice: booking.amount,
+                odometerReading: booking.odometerReading,
                 status: booking.status
             }
         });

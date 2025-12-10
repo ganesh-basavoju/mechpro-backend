@@ -95,7 +95,7 @@ exports.login = async (req, res) => {
     if (!isMatch) {
       return res.status(400).json({ message: 'Invalid credentials' });
     }
-
+    
     // Create JWT token
     const payload = {
       mechanic: {
@@ -131,6 +131,7 @@ exports.login = async (req, res) => {
 exports.getProfile = async (req, res) => {
   try {
     const mechanic = await Mechanic.findById(req.mechanic.id).select('-password');
+    
     if (!mechanic) {
       return res.status(404).json({ message: 'Mechanic not found' });
     }
