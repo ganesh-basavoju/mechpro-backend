@@ -261,3 +261,40 @@ exports.getBookingDetails = async (req, res) => {
         res.status(500).send('Server error');
     }
 };
+
+// Cancel booking
+exports.cancelBooking = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const booking = await Booking.findOne({
+            _id: id,
+            'customer.phone': req.user.phone
+        });
+
+        if (!booking) {
+            return res.status(404).json({ message: 'Booking not found' });
+        }
+
+        // Check if booking can be cancelled
+        if (booking.status === 'completed') {
+            return res.status(400).json({ message: 'Cannot cancel completed booking' });
+        }
+
+        if (booking.status === 'cancelled') {
+            return res.status(400).json({ message: 'Booking is already cancelled' });
+        }
+
+        // Update booking status to cancelled
+        booking.status = 'cancelled';
+        await booking.save();
+
+        res.json({ 
+            message: 'Booking cancelled successfully',
+            booking 
+        });
+    } catch (error) {
+        console.error(error.message);
+        res.status(500).send('Server error');
+    }
+};

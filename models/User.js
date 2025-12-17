@@ -17,7 +17,9 @@ const userSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: "Booking"
     }],
-    fcmToken: { type: String, default: "" }
+    fcmToken: { type: String, default: "" },
+    resetOTP: { type: String, default: null },
+    resetOTPExpiry: { type: Date, default: null }
 }, {
     timestamps: true
 });

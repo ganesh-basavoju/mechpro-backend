@@ -18,6 +18,7 @@ router.delete('/cars/:id', auth, userController.deleteCar);
 // Bookings routes
 router.get('/bookings', auth, userController.getBookings);
 router.get('/bookings/:id', auth, userController.getBookingDetails);
+router.post('/bookings/:id/cancel', auth, userController.cancelBooking);
 
 // Booking routes
 router.get('/mechanic/:mechanicId', auth, bookingprocessController.getMechanicServices);

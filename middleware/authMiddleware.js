@@ -4,7 +4,8 @@ const User = require('../models/User');
 module.exports = async function (req, res, next) {
     // Get token from header
     const token = req.header('Authorization')?.replace('Bearer ', '');
-
+    console.log("Auth Middleware Token:", token);
+    console.log(req.headers);
     // Check if no token
     if (!token) {
         return res.status(401).json({ message: 'No token, authorization denied' });
@@ -15,7 +16,7 @@ module.exports = async function (req, res, next) {
         const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your_jwt_secret');
 
         // Get user from token
-        const user = await User.findById(decoded._id).select('-password');
+        const user = await User.findById(decoded.id).select('-password');
         if (!user) {
             return res.status(401).json({ message: 'Token is not valid' });
         }

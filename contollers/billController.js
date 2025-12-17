@@ -212,8 +212,16 @@ exports.generateBillPDF = async (req, res) => {
 
         // Path to logo and PhonePe QR
         const path = require('path');
-        const logoPath = path.join(__dirname, '..', '..', 'mechanicpro', 'public', 'logo.png');
-        const phonepePath = path.join(__dirname, '..', '..', 'mechanicpro', 'public', 'phonepe.png');
+        const fs = require('fs');
+        const logoPath = path.resolve(__dirname, '..', '..', 'mechanicpro', 'public', 'logo.png');
+        const phonepePath = path.resolve(__dirname, '..', '..', 'mechanicpro', 'public', 'phonepe.png');
+        
+        // Verify files exist
+        const logoExists = fs.existsSync(logoPath);
+        const phonepeExists = fs.existsSync(phonepePath);
+        
+        if (!logoExists) console.warn('Logo file not found at:', logoPath);
+        if (!phonepeExists) console.warn('PhonePe QR file not found at:', phonepePath);
 
         // Create PDF document
         const doc = new PDFDocument({ 
@@ -230,24 +238,36 @@ exports.generateBillPDF = async (req, res) => {
 
         // Helper function to add header on each page
         const addHeader = () => {
+            // Save graphics state
+            doc.save();
+            
             // Orange header background
             doc.rect(0, 0, doc.page.width, 80)
                 .fill('#FF6B35');
 
+            // Restore graphics state before drawing white elements
+            doc.restore();
+            doc.save();
+            
             // White background for logo with rounded corners
             doc.roundedRect(45, 15, 50, 50, 8)
-                .fill('#FFFFFF');
+                .fillAndStroke('#FFFFFF', '#DDDDDD');
 
             // Logo image (left side) - on top of white background
-            try {
-                doc.image(logoPath, 50, 20, { 
-                    width: 40,
-                    height: 40
-                });
-            } catch (error) {
-                console.warn('Logo not found, skipping image:', error.message);
+            if (logoExists) {
+                try {
+                    doc.image(logoPath, 50, 20, { 
+                        width: 40,
+                        height: 40
+                    });
+                } catch (error) {
+                    console.warn('Logo not found, skipping image:', error.message);
+                }
             }
 
+            // Restore and prepare for text
+            doc.restore();
+            
             // Company name (next to logo)
             doc.fillColor('#FFFFFF')
                 .fontSize(24)
@@ -256,18 +276,22 @@ exports.generateBillPDF = async (req, res) => {
             
             doc.fontSize(10)
                 .font('Helvetica')
+                .fillColor('#FFFFFF')
                 .text('Your Vehicle In Safer Hands', 100, 52);
 
             // INVOICE text (right side)
             doc.fontSize(36)
                 .font('Helvetica-Bold')
+                .fillColor('#FFFFFF')
                 .text('INVOICE', doc.page.width - 200, 25, {
                     align: 'right',
                     width: 150
                 });
 
-            // Reset fill color
-            doc.fillColor('#000000');
+            // Reset fill color for content
+            doc.fillColor('#000000')
+                .fontSize(12)
+                .font('Helvetica');
         };
 
         // Helper function to add footer on each page
@@ -522,27 +546,29 @@ exports.generateBillPDF = async (req, res) => {
             yPosition = 110;
         }
 
-        try {
-            // Position PhonePe QR code at bottom right
-            const qrSize = 100; // 100x100 pixels
-            const qrX = doc.page.width - qrSize - 45; // 70px from right edge
-            const qrY = doc.page.height - 240; // 180px from bottom (above footer)
+        if (phonepeExists) {
+            try {
+                // Position PhonePe QR code at bottom right
+                const qrSize = 100; // 100x100 pixels
+                const qrX = doc.page.width - qrSize - 45; // 70px from right edge
+                const qrY = doc.page.height - 240; // 180px from bottom (above footer)
 
-            doc.image(phonepePath, qrX, qrY, {
-                width: qrSize,
-                height: qrSize
-            });
-
-            // Add text below QR code
-            doc.fontSize(9)
-                .font('Helvetica')
-                .fillColor('#000000')
-                .text('Scan to Pay via PhonePe', qrX - 10, qrY + qrSize + 5, {
-                    width: qrSize + 20,
-                    align: 'center'
+                doc.image(phonepePath, qrX, qrY, {
+                    width: qrSize,
+                    height: qrSize
                 });
-        } catch (error) {
-            console.warn('PhonePe QR code not found, skipping image:', error.message);
+
+                // Add text below QR code
+                doc.fontSize(9)
+                    .font('Helvetica')
+                    .fillColor('#000000')
+                    .text('Scan to Pay via PhonePe', qrX - 10, qrY + qrSize + 5, {
+                        width: qrSize + 20,
+                        align: 'center'
+                    });
+            } catch (error) {
+                console.warn('PhonePe QR code not found, skipping image:', error.message);
+            }
         }
 
         // Add footer
