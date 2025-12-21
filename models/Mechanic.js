@@ -30,7 +30,9 @@ const mechanicSchema = new moongoose.Schema({
         }],
         default: []
     },
-    fcmToken: { type: String, default: "" }
+    fcmToken: { type: String, default: "" },
+    resetOTP: { type: String },
+    resetOTPExpiry: { type: Date }
 }, { timestamps: true })
 
 module.exports = moongoose.model("Mechanic", mechanicSchema);

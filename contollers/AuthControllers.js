@@ -1,4 +1,5 @@
 const User = require('../models/User');
+const Mechanic = require('../models/Mechanic');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const { generateToken } = require('../utils');
@@ -73,16 +74,20 @@ const loginUser = async (req, res) => {
 // Request OTP for password reset
 const requestPasswordReset = async (req, res) => {
     try {
-        const { phone } = req.body;
+        const { phone, type } = req.body; // type: 'user' or 'mechanic'
 
         if (!phone) {
             return res.status(400).json({ message: 'Phone number is required' });
         }
 
-        // Find user by phone
-        const user = await User.findOne({ phone });
-        if (!user) {
-            return res.status(404).json({ message: 'User not found with this phone number' });
+        // Determine which model to use
+        const Model = type === 'mechanic' ? Mechanic : User;
+        const accountType = type === 'mechanic' ? 'Mechanic' : 'User';
+
+        // Find account by phone
+        const account = await Model.findOne({ phone });
+        if (!account) {
+            return res.status(404).json({ message: `${accountType} not found with this phone number` });
         }
 
         // Generate 6-digit OTP
@@ -91,16 +96,16 @@ const requestPasswordReset = async (req, res) => {
         // Set OTP expiry to 10 minutes
         const otpExpiry = new Date(Date.now() + 10 * 60 * 1000);
 
-        // Save OTP to user
-        user.resetOTP = otp;
-        user.resetOTPExpiry = otpExpiry;
-        await user.save();
+        // Save OTP to account
+        account.resetOTP = otp;
+        account.resetOTPExpiry = otpExpiry;
+        await account.save();
 
         // Send OTP via Twilio
         const smsResult = await sendOTPSMS(phone, otp);
         
         if (smsResult.success) {
-            console.log(`✅ OTP sent successfully to ${phone} via SMS`);
+            console.log(`✅ OTP sent successfully to ${phone} via SMS (${accountType})`);
             
             res.status(200).json({
                 success: true,
@@ -124,33 +129,37 @@ const requestPasswordReset = async (req, res) => {
 // Verify OTP
 const verifyOTP = async (req, res) => {
     try {
-        const { phone, otp } = req.body;
+        const { phone, otp, type } = req.body; // type: 'user' or 'mechanic'
 
         if (!phone || !otp) {
             return res.status(400).json({ message: 'Phone number and OTP are required' });
         }
 
-        // Find user by phone
-        const user = await User.findOne({ phone });
-        if (!user) {
-            return res.status(404).json({ message: 'User not found' });
+        // Determine which model to use
+        const Model = type === 'mechanic' ? Mechanic : User;
+        const accountType = type === 'mechanic' ? 'Mechanic' : 'User';
+
+        // Find account by phone
+        const account = await Model.findOne({ phone });
+        if (!account) {
+            return res.status(404).json({ message: `${accountType} not found` });
         }
 
         // Check if OTP exists
-        if (!user.resetOTP || !user.resetOTPExpiry) {
+        if (!account.resetOTP || !account.resetOTPExpiry) {
             return res.status(400).json({ message: 'No OTP request found. Please request a new OTP' });
         }
 
         // Check if OTP is expired
-        if (new Date() > user.resetOTPExpiry) {
-            user.resetOTP = null;
-            user.resetOTPExpiry = null;
-            await user.save();
+        if (new Date() > account.resetOTPExpiry) {
+            account.resetOTP = null;
+            account.resetOTPExpiry = null;
+            await account.save();
             return res.status(400).json({ message: 'OTP has expired. Please request a new one' });
         }
 
         // Verify OTP
-        if (user.resetOTP !== otp) {
+        if (account.resetOTP !== otp) {
             return res.status(400).json({ message: 'Invalid OTP' });
         }
 
@@ -168,7 +177,7 @@ const verifyOTP = async (req, res) => {
 // Reset password
 const resetPassword = async (req, res) => {
     try {
-        const { phone, otp, newPassword } = req.body;
+        const { phone, otp, newPassword, type } = req.body; // type: 'user' or 'mechanic'
 
         if (!phone || !otp || !newPassword) {
             return res.status(400).json({ message: 'Phone number, OTP, and new password are required' });
@@ -178,27 +187,31 @@ const resetPassword = async (req, res) => {
             return res.status(400).json({ message: 'Password must be at least 6 characters long' });
         }
 
-        // Find user by phone
-        const user = await User.findOne({ phone });
-        if (!user) {
-            return res.status(404).json({ message: 'User not found' });
+        // Determine which model to use
+        const Model = type === 'mechanic' ? Mechanic : User;
+        const accountType = type === 'mechanic' ? 'Mechanic' : 'User';
+
+        // Find account by phone
+        const account = await Model.findOne({ phone });
+        if (!account) {
+            return res.status(404).json({ message: `${accountType} not found` });
         }
 
         // Check if OTP exists
-        if (!user.resetOTP || !user.resetOTPExpiry) {
+        if (!account.resetOTP || !account.resetOTPExpiry) {
             return res.status(400).json({ message: 'No OTP request found. Please request a new OTP' });
         }
 
         // Check if OTP is expired
-        if (new Date() > user.resetOTPExpiry) {
-            user.resetOTP = null;
-            user.resetOTPExpiry = null;
-            await user.save();
+        if (new Date() > account.resetOTPExpiry) {
+            account.resetOTP = null;
+            account.resetOTPExpiry = null;
+            await account.save();
             return res.status(400).json({ message: 'OTP has expired. Please request a new one' });
         }
 
         // Verify OTP
-        if (user.resetOTP !== otp) {
+        if (account.resetOTP !== otp) {
             return res.status(400).json({ message: 'Invalid OTP' });
         }
 
@@ -207,10 +220,10 @@ const resetPassword = async (req, res) => {
         const hashedPassword = await bcrypt.hash(newPassword, salt);
 
         // Update password and clear OTP
-        user.password = hashedPassword;
-        user.resetOTP = null;
-        user.resetOTPExpiry = null;
-        await user.save();
+        account.password = hashedPassword;
+        account.resetOTP = null;
+        account.resetOTPExpiry = null;
+        await account.save();
 
         res.status(200).json({
             success: true,
