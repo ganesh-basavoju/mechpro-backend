@@ -97,7 +97,7 @@ app.use("/api/public", publicRoutes);
 
 
 
-app.use(adminAuthmiddleware);
+//app.use(adminAuthmiddleware);
 app.use("/api/admin/user", userRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/admin/booking", bookingRoutes);
