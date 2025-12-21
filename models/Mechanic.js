@@ -1,7 +1,7 @@
 const moongoose = require("mongoose");
 
 const mechanicSchema = new moongoose.Schema({
-    profile: { type: String, default: "" },
+    profile: { type: String, default: "https://icon-library.com/images/anonymous-avatar-icon/anonymous-avatar-icon-25.jpg" },
     name: { type: String, required: true },
     email: { type: String, default: "" },
     password: { type: String, required: true },

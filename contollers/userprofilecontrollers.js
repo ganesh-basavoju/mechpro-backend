@@ -1,6 +1,9 @@
 const User = require('../models/User');
 const Booking = require('../models/Bookings');
+const Mechanic = require('../models/Mechanic');
 const bcrypt = require('bcryptjs');
+const { sendNotificationToMechanic } = require('../socket/socket');
+const fcmService = require('../services/fcmService');
 
 // Get user profile
 exports.getProfile = async (req, res) => {
@@ -289,12 +292,39 @@ exports.cancelBooking = async (req, res) => {
         booking.status = 'cancelled';
         await booking.save();
 
+        // Send notification to mechanic about cancellation
+        if (booking.mechanic) {
+            const mechanic = await Mechanic.findById(booking.mechanic);
+            
+            // Send Socket.IO notification to mechanic
+            sendNotificationToMechanic(booking.mechanic.toString(), {
+                type: 'booking_cancelled',
+                bookingId: id,
+                message: `Booking cancelled by ${booking.customer.name}`,
+                customerName: booking.customer.name,
+                serviceType: booking.serviceType,
+                dateTime: booking.dateTime
+            });
+            console.log(`✅ Socket notification sent to mechanic ${booking.mechanic}`);
+
+            // Send FCM notification to mechanic
+            if (mechanic?.fcmToken && mechanic.fcmToken !== "") {
+                fcmService.sendToUser(mechanic.fcmToken, {
+                    title: "Booking Cancelled",
+                    body: `${booking.customer.name} cancelled their booking for ${booking.serviceType}`,
+                    type: "booking_cancelled",
+                    bookingId: id
+                }, "mechanic", mechanic._id);
+                console.log(`✅ FCM notification sent to mechanic ${mechanic._id}`);
+            }
+        }
+
         res.json({ 
             message: 'Booking cancelled successfully',
             booking 
         });
     } catch (error) {
-        console.error(error.message);
+        console.error('Error cancelling booking:', error.message);
         res.status(500).send('Server error');
     }
 };

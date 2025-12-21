@@ -2,6 +2,7 @@
 let io;
 const onlineUsers = new Map();
 const onlineMechanics = new Map();
+const onlineAdmins = new Map();
 
 function initSocket(server) {
     const { Server } = require('socket.io');
@@ -27,6 +28,12 @@ function initSocket(server) {
             console.log(`Mechanic ${mechanicId} connected with socket ${socket.id}`);
         });
 
+        // Register admin
+        socket.on("register_admin", (adminId) => {
+            onlineAdmins.set(adminId, socket.id);
+            console.log(`Admin ${adminId} connected with socket ${socket.id}`);
+        });
+
         // Disconnect handling
         socket.on("disconnect", () => {
             for (let [userId, sId] of onlineUsers.entries()) {
@@ -44,6 +51,14 @@ function initSocket(server) {
                     break;
                 }
             }
+
+            for (let [adminId, sId] of onlineAdmins.entries()) {
+                if (sId === socket.id) {
+                    onlineAdmins.delete(adminId);
+                    console.log(`Admin ${adminId} disconnected`);
+                    break;
+                }
+            }
         });
     });
 }
@@ -52,20 +67,32 @@ function initSocket(server) {
 function sendNotificationToUser(userId, data) {
     const socketId = onlineUsers.get(userId);
     if (socketId && io) {
+        // Emit both notification and booking_update for backward compatibility
         io.to(socketId).emit("notification", data);
-        console.log(`Notification sent to user ${userId}:`, data);
+        if (data.type === 'booking_update' || data.bookingId) {
+            io.to(socketId).emit("booking_update", data);
+        }
+        console.log(`✅ Notification sent to user ${userId}:`, data);
     } else {
-        console.log(`User ${userId} not connected`);
+        console.log(`⚠️ User ${userId} not connected to socket`);
     }
 }
 
 function sendNotificationToMechanic(mechanicId, data) {
     const socketId = onlineMechanics.get(mechanicId);
     if (socketId && io) {
+        // Emit both notification and appropriate event type for backward compatibility
         io.to(socketId).emit("notification", data);
-        console.log(`Notification sent to mechanic ${mechanicId}:`, data);
+        
+        if (data.type === 'new_booking' || data.type === 'booking_created') {
+            io.to(socketId).emit("new_booking", data);
+        } else if (data.type === 'booking_update' || data.type === 'booking_cancelled' || data.bookingId) {
+            io.to(socketId).emit("booking_update", data);
+        }
+        
+        console.log(`✅ Notification sent to mechanic ${mechanicId}:`, data);
     } else {
-        console.log(`Mechanic ${mechanicId} not connected`);
+        console.log(`⚠️ Mechanic ${mechanicId} not connected to socket`);
     }
 }
 
@@ -73,13 +100,28 @@ function sendNotificationToAllMechanics(data) {
     if (!io) return;
     onlineMechanics.forEach((socketId) => {
         io.to(socketId).emit("notification", data);
+        if (data.type === 'booking_update' || data.bookingId) {
+            io.to(socketId).emit("booking_update", data);
+        }
     });
-    console.log(`Notification sent to all ${onlineMechanics.size} mechanics`);
+    console.log(`✅ Notification sent to all ${onlineMechanics.size} mechanics`);
+}
+
+function sendNotificationToAllAdmins(data) {
+    if (!io) return;
+    onlineAdmins.forEach((socketId) => {
+        io.to(socketId).emit("notification", data);
+        if (data.type === 'new_booking' || data.bookingId) {
+            io.to(socketId).emit("new_booking", data);
+        }
+    });
+    console.log(`✅ Notification sent to all ${onlineAdmins.size} admins`);
 }
 
 module.exports = {
     initSocket,
     sendNotificationToUser,
     sendNotificationToMechanic,
-    sendNotificationToAllMechanics
+    sendNotificationToAllMechanics,
+    sendNotificationToAllAdmins
 };

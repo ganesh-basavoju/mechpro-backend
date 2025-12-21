@@ -1,5 +1,8 @@
 const Booking = require('../models/Bookings');
-const Mechanic = require('../models/Mechanic'); // Make sure you have this model
+const Mechanic = require('../models/Mechanic');
+const User = require('../models/User');
+const { sendNotificationToUser } = require('../socket/socket');
+const fcmService = require('../services/fcmService');
 
 // Get all bookings
 exports.getAllBookings = async (req, res) => {
@@ -233,6 +236,39 @@ exports.updateBookingStatus = async (req, res) => {
             });
         }
 
+        // Get user details for notification
+        const customer = await User.findOne({ phone: updatedBooking.customer.phone });
+        
+        // Send Socket.IO real-time update to user
+        if (customer && customer._id) {
+            sendNotificationToUser(customer._id.toString(), {
+                type: 'booking_update',
+                bookingId: bookingId,
+                status: status,
+                message: `Your booking status has been updated to ${status}`,
+                updatedData: {
+                    status: status,
+                    serviceType: updatedBooking.serviceType,
+                    vehicle: updatedBooking.vehicle,
+                    dateTime: updatedBooking.dateTime,
+                    amount: updatedBooking.amount
+                }
+            });
+            console.log(`✅ Socket notification sent to user ${customer._id}`);
+        }
+
+        // Send FCM notification
+        const fcmToken = customer?.fcmToken;
+        if (fcmToken && fcmToken !== "") {
+            fcmService.sendToUser(fcmToken, {
+                title: "Booking Status Updated",
+                body: `Your booking status has been updated to ${status} for ${updatedBooking?.vehicle?.make || "your vehicle"}`,
+                type: "booking_update",
+                bookingId: bookingId
+            }, "user", customer._id);
+            console.log(`✅ FCM notification sent to user ${customer._id}`);
+        }
+
         // Transform the updated booking
         const transformedBooking = {
             _id: updatedBooking._id,
@@ -270,6 +306,7 @@ exports.updateBookingStatus = async (req, res) => {
             data: transformedBooking
         });
     } catch (error) {
+        console.error('Error updating booking status:', error);
         res.status(500).json({
             success: false,
             message: 'Error updating booking status',

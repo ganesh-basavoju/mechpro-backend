@@ -185,16 +185,33 @@ exports.createBooking = async (req, res) => {
             $push: { notifications: { message: 'New booking received', type: 'booking', read: false } },
         });
 
-        sendNotificationToMechanic(mechanicId, {
+        // Prepare booking notification data
+        const bookingNotificationData = {
+            type: 'new_booking',
             id: booking._id,
+            bookingId: booking._id,
             customerName: user.fullname,
+            customerPhone: user.phone,
             mechanicName: mechanic.name,
             services: services.map(s => s.name),
+            serviceType: booking.serviceType,
+            vehicle: booking.vehicle,
             dateTime: booking.dateTime,
+            date: booking.dateTime.toLocaleDateString(),
+            time: booking.dateTime.toLocaleTimeString(),
             totalPrice: booking.amount,
+            amount: booking.amount,
             status: booking.status
-        });
+        };
+
+        // Send socket notification to the assigned mechanic (ensure mechanicId is a string)
+        sendNotificationToMechanic(mechanicId.toString(), bookingNotificationData);
+
+        // Send socket notification to all admins
+        const { sendNotificationToAllAdmins } = require('../socket/socket');
+        sendNotificationToAllAdmins(bookingNotificationData);
         
+        // Send FCM notification to mechanic if they have a token
         if (mechanic.fcmToken !== "") {
             fcmService.sendToUser(mechanic.fcmToken, {
                 title: 'New booking received',

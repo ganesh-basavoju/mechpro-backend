@@ -6,6 +6,7 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const fcmService = require('../services/fcmService');
 const SuperAdmin = require('../models/SuperAdmin');
+const { sendNotificationToUser } = require('../socket/socket');
 
 // Register mechanic
 exports.register = async (req, res) => {
@@ -263,29 +264,46 @@ exports.updateBookingStatus = async (req, res) => {
       { status },
       { new: true }
     );
-    const bookingDetails = await Booking.findById(id);
-    const customer = await User.findOne({ phone: bookingDetails.customer.phone });
-    const fcmToken = customer.fcmToken;
-
-    if (fcmToken != "") {
-      fcmService.sendToUser(fcmToken, {
-        title: "Booking Status Updated",
-        body: `Your booking status has been updated for ${bookingDetails?.vehicle?.make || " your vehicle"}`,
-        type: "notification",
-        bookingId: id||"vhdfjvh"
-      }, "user", customer._id);
-    }
-    console.log(customer, "customer");
-
 
     if (!booking) {
       return res.status(404).json({ message: 'Booking not found' });
     }
 
+    const bookingDetails = await Booking.findById(id);
+    const customer = await User.findOne({ phone: bookingDetails.customer.phone });
+    
+    // Send Socket.IO real-time update to user
+    if (customer && customer._id) {
+      sendNotificationToUser(customer._id.toString(), {
+        type: 'booking_update',
+        bookingId: id,
+        status: status,
+        message: `Your booking status has been updated to ${status}`,
+        updatedData: {
+          status: status,
+          serviceType: bookingDetails.serviceType,
+          vehicle: bookingDetails.vehicle,
+          dateTime: bookingDetails.dateTime
+        }
+      });
+      console.log(`✅ Socket notification sent to user ${customer._id}`);
+    }
+
+    // Send FCM notification
+    const fcmToken = customer?.fcmToken;
+    if (fcmToken && fcmToken !== "") {
+      fcmService.sendToUser(fcmToken, {
+        title: "Booking Status Updated",
+        body: `Your booking status has been updated to ${status} for ${bookingDetails?.vehicle?.make || "your vehicle"}`,
+        type: "booking_update",
+        bookingId: id || "unknown"
+      }, "user", customer._id);
+      console.log(`✅ FCM notification sent to user ${customer._id}`);
+    }
 
     res.status(200).json(booking);
   } catch (error) {
-    console.error(error.message);
+    console.error('Error updating booking status:', error.message);
     res.status(500).send('Server error');
   }
 };
