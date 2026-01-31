@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const mechanicController = require('../contollers/MechanicControllers');
+const inspectionController = require('../contollers/inspectionController');
 const authmechanic = require('../middleware/authmechanic');
 
 // Authentication routes
@@ -23,6 +24,10 @@ router.put('/spare-parts/:id/status', mechanicController.updateSparePartStatus);
 
 // Dashboard stats
 router.get('/dashboard-stats', mechanicController.getDashboardStats);
+
+// Inspection Routes
+router.post('/inspection', inspectionController.createReport);
+router.get('/inspection/:bookingId', inspectionController.getReport);
 
 // Shop status
 router.put('/shop-status', mechanicController.updateShopStatus);

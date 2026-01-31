@@ -4,6 +4,8 @@ const userController = require('../contollers/userprofilecontrollers');
 const auth = require('../middleware/authMiddleware');
 const bookingprocessController = require('../contollers/bookingprocess');
 const servicesController = require('../contollers/servicesController');
+const serviceHistoryController = require('../contollers/serviceHistoryController');
+const inspectionController = require('../contollers/inspectionController');
 
 // User routes
 router.get('/profile', auth, userController.getProfile);
@@ -24,6 +26,12 @@ router.post('/bookings/:id/cancel', auth, userController.cancelBooking);
 router.get('/mechanic/:mechanicId', auth, bookingprocessController.getMechanicServices);
 router.post('/booking-create', auth, bookingprocessController.createBooking);
 router.get('/user-bookings', auth, bookingprocessController.getUserBookings);
+router.get('/user-bookings', auth, bookingprocessController.getUserBookings);
 router.get('/get-services', auth, servicesController.getAllServices);
+router.get('/service-history', auth, serviceHistoryController.getServiceHistory);
+
+// Inspection Routes
+router.get('/inspection/:bookingId', auth, inspectionController.getReport);
+router.post('/inspection/:reportId/decision', auth, inspectionController.submitDecision);
 
 module.exports = router;

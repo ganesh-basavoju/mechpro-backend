@@ -259,6 +259,16 @@ exports.updateBookingStatus = async (req, res) => {
     const { id } = req.params;
     const { status } = req.body;
 
+    // Check if booking is already completed
+    const existingBooking = await Booking.findOne({ _id: id, mechanic: req.mechanic.id });
+    if (!existingBooking) {
+      return res.status(404).json({ message: 'Booking not found' });
+    }
+
+    if (existingBooking.status === 'completed') {
+      return res.status(400).json({ message: 'Cannot change status of a completed booking' });
+    }
+
     const booking = await Booking.findOneAndUpdate(
       { _id: id, mechanic: req.mechanic.id },
       { status },

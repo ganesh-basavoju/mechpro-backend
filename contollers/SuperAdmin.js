@@ -163,6 +163,15 @@ const BookingStatusUpdate = async (req, res) => {
             return res.status(401).json('Provide id and status');
         }
 
+        const existingBooking = await booking.findById(id);
+        if (!existingBooking) {
+            return res.status(404).json({ message: 'Booking not found' });
+        }
+
+        if (existingBooking.status === 'completed') {
+            return res.status(400).json({ message: 'Cannot change status of a completed booking' });
+        }
+
         await booking.findByIdAndUpdate(id, { $set: { status } });
         const bookings = await booking.find();
         res.status(200).json({ msg: 'Status updated', data: bookings });
