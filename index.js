@@ -15,6 +15,7 @@ const authRoutes = require("./routes/authRoutes");
 const userprofile = require("./routes/userprofile");
 const billRoutes = require("./routes/billRoutes");
 const carouselRoutes = require("./routes/carouselRoutes");
+const testimonialRoutes = require("./routes/testimonialRoutes");
 const { adminAuthmiddleware } = require("./middleware/authadmin")
 const amdinAuth = require("./routes/adminAuth");
 const publicRoutes = require("./routes/public");
@@ -96,6 +97,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/user", userprofile);
 app.use("/api/public", publicRoutes);
 app.use("/api/carousel", carouselRoutes);
+app.use("/api/testimonials", testimonialRoutes);
 
 
 
